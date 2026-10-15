@@ -1,6 +1,7 @@
 import { UsuarioModel } from "../models/usuarioModel.js";
 import bcrypt from "bcryptjs";
-
+import jwt from 'jsonwebtoken';
+const SECRET_JWT_KEY = process.env.SECRET_JWT_KEY;
 
 export class AuthController {
 
@@ -10,7 +11,7 @@ export class AuthController {
             const { nombre, apellido, email, password, telefono, rol } = req.body;
             const usuarioExistente = await UsuarioModel.buscarPorEmail(email);
                 if(usuarioExistente){
-                return res.status(400).json({mesagge: 'El correo electronico ya está registrado.'})
+                return res.status(400).json({mensaje: 'El correo electronico ya está registrado.'})
                 }
             const saltRounds = 10;
             const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -23,7 +24,7 @@ export class AuthController {
                 rol
             })
             return res.status(201).json({
-                message: 'Usuario registrado con éxito',
+                mensaje: 'Usuario registrado con éxito',
                 id: idUsuario
             })
         }catch(error){
@@ -31,5 +32,44 @@ export class AuthController {
         }
     }
 
+    static async loginUsuario (req,res) {
+    
+        try{
+            const {email, password} = req.body;
+            const usuario = await UsuarioModel.loginUsuario(email);
+            if(!usuario){
+                return res.status(401).json({mensaje: 'Usuario no encontrado'})
+            }
+            const esPasswordvalida = await bcrypt.compare(password,usuario.password);
+            if(!esPasswordvalida){
+                return res.status(401).json({mensaje: 'Contraseña incorrecta'})
+            }
+            const token = jwt.sign(
+                {id: usuario.id, email: usuario.email, rol: usuario.rol},
+                process.env.SECRET_JWT_KEY || 'cl4v3_SECr3t4_p0i5p9o8_uN1ca',
+                {expiresIn: '1h'}
+            );
 
+            return res.status(200)
+            .cookie('token', token,{
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'produccion',
+                sameSite: 'strict',
+                maxAge: 3600000
+            })
+            .json({
+                mensaje: 'Inicio de sesión exitoso',
+                usuario: {
+                    id: usuario.id,
+                    nombre: usuario.nombre,
+                    apellido: usuario.apellido,
+                    telefono: usuario.telefono,
+                    email: usuario.email,
+                    rol: usuario.rol
+                }
+            });
+        }catch(error){
+            return res.status(500).json({ error: error.message });
+        }
+    }
 }

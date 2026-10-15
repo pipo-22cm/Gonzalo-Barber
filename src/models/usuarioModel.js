@@ -13,4 +13,9 @@ export class UsuarioModel {
         return result.insertID;
     }
 
+    static async loginUsuario (email){
+        const [rows] = await db.execute ('SELECT * FROM usuarios WHERE email = ?', [email]);
+        return rows [0];
+    }
+
 }
