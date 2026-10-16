@@ -72,4 +72,22 @@ export class AuthController {
             return res.status(500).json({ error: error.message });
         }
     }
+
+    static async logoutUsuario (req,res) {
+        try {
+            res.clearCookie('token');
+
+            return res.json({
+                ok: true,
+                mensaje: 'Sesión cerrada correctamente'
+            })
+
+        }catch(error){
+            return res.status(500).json({
+                ok: false,
+                mensaje: 'Hubo un error al cerrar sesión'
+            });
+        }
+    }
+
 }
